@@ -7,7 +7,7 @@ app = Flask(__name__)
 CORS(app)
 FAST_API_KEY = os.environ.get('API_KEY', 'sk-J9vDDHyPZfXCCf9CLNNMpnDdayVDnEDQ7AQ44siKoIu3PsaS')
 FAST_BASE_URL = 'https://fast.typegpt.net/v1/chat/completions'
-PUTER_BASE_URL = 'https://api.puter.com/v1/chat'  # Adjust if needed
+PUTER_BASE_URL = 'https://api.puter.com/chat'  # Placeholder—verify with Puter
 VALID_MODELS = ['deepseek-r1', 'gpt-4o', 'claude']
 
 def call_fast_typegpt(prompt, model):
@@ -32,13 +32,14 @@ def call_puter_ai(prompt, model):
         'Content-Type': 'application/json'
     }
     data = {
-        'model': model,
+        'model': model,  # Matches your example
         'prompt': prompt,
-        'stream': False
+        'stream': False  # Non-streaming for simplicity (your example streams)
     }
     try:
         response = requests.post(PUTER_BASE_URL, json=data, headers=headers)
         response.raise_for_status()
+        # Assuming Puter returns {text: "response"}—adjust based on real response
         return {'answer': response.json().get('text', 'No response')}
     except requests.RequestException as e:
         return {'error': f'Puter API Failed: {str(e)}'}
