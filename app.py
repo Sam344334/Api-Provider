@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # Add this
+from flask_cors import CORS  # For your website
 import requests
 import os
 
 app = Flask(__name__)
-CORS(app)  # Allow all origins (for testing)
+CORS(app)  # Allow all origins for chat website
 API_KEY = os.environ.get('API_KEY', 'sk-J9vDDHyPZfXCCf9CLNNMpnDdayVDnEDQ7AQ44siKoIu3PsaS')
 BASE_URL = 'https://fast.typegpt.net/v1/chat/completions'
 
