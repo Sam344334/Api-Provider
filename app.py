@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Add this
 import requests
 import os
 
 app = Flask(__name__)
+CORS(app)  # Allow all origins (for testing)
 API_KEY = os.environ.get('API_KEY', 'sk-J9vDDHyPZfXCCf9CLNNMpnDdayVDnEDQ7AQ44siKoIu3PsaS')
 BASE_URL = 'https://fast.typegpt.net/v1/chat/completions'
 
@@ -32,7 +34,6 @@ def answer():
     response = call_fast_typegpt(prompt)
     return jsonify(response)
 
-# Add a root route to avoid "Not Found" on the base URL
 @app.route('/')
 def home():
     return "Welcome to My API! Use /api/answer to send a prompt."
