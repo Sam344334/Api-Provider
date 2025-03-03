@@ -1,3 +1,6 @@
 Flask
 requests
 flask-cors
+flask-login
+flask-sqlalchemy
+werkzeug
