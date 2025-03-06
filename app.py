@@ -1,15 +1,14 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 import os
-import uuid  # For generating unique keys
 
 app = Flask(__name__)
 CORS(app)
 FAST_API_KEY = os.environ.get('API_KEY', 'sk-J9vDDHyPZfXCCf9CLNNMpnDdayVDnEDQ7AQ44siKoIu3PsaS')
 FAST_BASE_URL = 'https://fast.typegpt.net/v1/chat/completions'
 PUTER_BASE_URL = 'https://api.puter.com/chat'  # Placeholder—verify with Puter
-VALID_API_KEYS = {'my-secret-key': True}  # Store valid keys here
+VALID_API_KEYS = {'my-secret-key': True}  # Add your keys here
 VALID_MODELS = ['deepseek-r1', 'gpt-4o', 'claude']
 
 def call_fast_typegpt(prompt, model):
@@ -47,9 +46,11 @@ def call_puter_ai(prompt, model):
 
 @app.route('/api/answer', methods=['POST'])
 def answer():
+    # Check API key
     user_api_key = request.headers.get('X-API-Key')
     if not user_api_key or user_api_key not in VALID_API_KEYS:
         return jsonify({'error': 'Invalid or missing API key'}), 401
+
     data = request.get_json()
     prompt = data.get('prompt', '')
     model = data.get('model', 'deepseek-r1')
@@ -57,6 +58,7 @@ def answer():
         return jsonify({'error': 'Prompt required'}), 400
     if model not in VALID_MODELS:
         return jsonify({'error': f'Model {model} not supported. Use: {VALID_MODELS}'}), 400
+    
     if model == 'claude':
         response = call_puter_ai(prompt, model)
     else:
@@ -65,15 +67,7 @@ def answer():
 
 @app.route('/')
 def home():
-    return render_template('home.html')
-
-@app.route('/generate-key', methods=['GET', 'POST'])
-def generate_key():
-    if request.method == 'POST':
-        new_key = str(uuid.uuid4())  # Generate a unique key
-        VALID_API_KEYS[new_key] = True  # Add to valid keys
-        return render_template('generate_key.html', api_key=new_key)
-    return render_template('generate_key.html', api_key=None)
+    return f"Welcome to My API! Use /api/answer with an API key and model ({VALID_MODELS})."
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
