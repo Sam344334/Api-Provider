@@ -4,15 +4,13 @@ import requests
 import os
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins for simplicity
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Constants
 FAST_API_KEY = os.environ.get('API_KEY', 'sk-J9vDDHyPZfXCCf9CLNNMpnDdayVDnEDQ7AQ44siKoIu3PsaS')
 FAST_BASE_URL = 'https://fast.typegpt.net/v1/chat/completions'
-PUTER_BASE_URL = 'https://api.puter.com/chat'  # Placeholder—verify with Puter
+PUTER_BASE_URL = 'https://api.puter.com/chat'
 VALID_MODELS = ['deepseek-r1', 'gpt-4o', 'claude']
 
-# API helper functions
 def call_fast_typegpt(prompt, model):
     headers = {
         'Authorization': f'Bearer {FAST_API_KEY}',
@@ -46,14 +44,12 @@ def call_puter_ai(prompt, model):
     except requests.RequestException as e:
         return {'error': f'Puter API Failed: {str(e)}'}
 
-# Routes
 @app.route('/')
 def home():
     return render_template('home.html', models=VALID_MODELS)
 
 @app.route('/api/answer', methods=['POST'])
 def answer():
-    # No API key check—open access
     data = request.get_json()
     prompt = data.get('prompt', '')
     model = data.get('model', 'deepseek-r1')
