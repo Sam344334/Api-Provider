@@ -1,16 +1,18 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import requests
 import os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins for simplicity
+
+# Constants
 FAST_API_KEY = os.environ.get('API_KEY', 'sk-J9vDDHyPZfXCCf9CLNNMpnDdayVDnEDQ7AQ44siKoIu3PsaS')
 FAST_BASE_URL = 'https://fast.typegpt.net/v1/chat/completions'
 PUTER_BASE_URL = 'https://api.puter.com/chat'  # Placeholder—verify with Puter
-VALID_API_KEYS = {'my-secret-key': True}  # Add your keys here
 VALID_MODELS = ['deepseek-r1', 'gpt-4o', 'claude']
 
+# API helper functions
 def call_fast_typegpt(prompt, model):
     headers = {
         'Authorization': f'Bearer {FAST_API_KEY}',
@@ -44,13 +46,14 @@ def call_puter_ai(prompt, model):
     except requests.RequestException as e:
         return {'error': f'Puter API Failed: {str(e)}'}
 
+# Routes
+@app.route('/')
+def home():
+    return render_template('home.html', models=VALID_MODELS)
+
 @app.route('/api/answer', methods=['POST'])
 def answer():
-    # Check API key
-    user_api_key = request.headers.get('X-API-Key')
-    if not user_api_key or user_api_key not in VALID_API_KEYS:
-        return jsonify({'error': 'Invalid or missing API key'}), 401
-
+    # No API key check—open access
     data = request.get_json()
     prompt = data.get('prompt', '')
     model = data.get('model', 'deepseek-r1')
@@ -58,16 +61,11 @@ def answer():
         return jsonify({'error': 'Prompt required'}), 400
     if model not in VALID_MODELS:
         return jsonify({'error': f'Model {model} not supported. Use: {VALID_MODELS}'}), 400
-    
     if model == 'claude':
         response = call_puter_ai(prompt, model)
     else:
         response = call_fast_typegpt(prompt, model)
     return jsonify(response)
-
-@app.route('/')
-def home():
-    return f"Welcome to My API! Use /api/answer with an API key and model ({VALID_MODELS})."
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
