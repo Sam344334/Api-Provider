@@ -75,14 +75,16 @@ def call_openrouter(prompt, model):
     headers = {
         'Authorization': f'Bearer {OPENROUTER_API_KEY}',
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://api-provider-b5s7.onrender.com',
-        'X-Title': 'AI Models Demo'
+        'HTTP-Referer': 'https://api-provider-b5s7.onrender.com/',  # Updated with trailing slash
+        'X-Title': 'AI Models Demo',
+        'OpenAI-Organization': 'augment-code'  # Added organization header
     }
     
     data = {
         'model': model,
         'messages': [{'role': 'user', 'content': prompt}],
-        'max_tokens': 1000
+        'max_tokens': 1000,
+        'temperature': 0.7
     }
     
     try:
@@ -90,6 +92,8 @@ def call_openrouter(prompt, model):
         response.raise_for_status()
         return {'answer': response.json()['choices'][0]['message']['content']}
     except requests.RequestException as e:
+        if response.status_code == 401:
+            return {'error': 'OpenRouter API authentication failed. Please check your API key.'}
         return {'error': f'OpenRouter API Failed: {str(e)}'}
 
 @app.route('/')
