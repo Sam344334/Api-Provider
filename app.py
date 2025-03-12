@@ -51,36 +51,36 @@ def call_blackbox_ai(prompt, model="Claude-sonnet-3.7"):
     headers = {
         'Content-Type': 'application/json',
         'Origin': 'https://www.blackbox.ai',
-        'Referer': 'https://www.blackbox.ai/chat'
+        'Referer': 'https://www.blackbox.ai/chat',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+        'Connection': 'keep-alive'
     }
     
-    message_id = str(uuid.uuid4())[:7]
+    message_id = str(uuid.uuid4())
+    conversation_id = str(uuid.uuid4())
     
     data = {
         "messages": [{"id": message_id, "content": prompt, "role": "user"}],
-        "agentMode": {
-            "name": model,
-            "id": model,
-            "mode": True
-        },
-        "userId": None,
-        "userSystemPrompt": None,
-        "isChromeExt": False,
-        "isPremium": True,
-        "maxTokens": 1024,
-        "validated": str(uuid.uuid4()),
-        "codeModelMode": True
+        "conversation_id": conversation_id,
+        "stream": False,
+        "model": model,
+        "max_tokens": 1024,
+        "temperature": 0.7
     }
     
     try:
         response = requests.post(BLACKBOX_URL, json=data, headers=headers)
         response.raise_for_status()
         
-        # Parse the streaming response or regular response
-        answer = response.json().get('content', 'No response')
-        return {'answer': answer}
+        return {'answer': response.json().get('response', 'No response')}
     except requests.RequestException as e:
-        return {'error': f'BlackBox AI Failed: {str(e)}'}
+        # Fallback to Claude via Puter if Blackbox fails
+        return call_puter_ai(prompt, "claude")
 
 @app.route('/')
 def home():
@@ -100,14 +100,21 @@ def answer():
     if model not in VALID_MODELS:
         return jsonify({'error': f'Model {model} not supported. Use: {VALID_MODELS}'}), 400
     
-    if model == 'claude':
-        response = call_puter_ai(prompt, model)
-    elif model == 'claude-sonnet':
-        response = call_blackbox_ai(prompt)
-    else:
-        response = call_fast_typegpt(prompt, model)
-    
-    return jsonify(response)
+    try:
+        if model == 'claude':
+            response = call_puter_ai(prompt, model)
+        elif model == 'claude-sonnet':
+            response = call_blackbox_ai(prompt)
+        else:
+            response = call_fast_typegpt(prompt, model)
+        
+        if 'error' in response:
+            # If the primary model fails, fallback to deepseek-r1
+            return call_fast_typegpt(prompt, 'deepseek-r1')
+            
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
