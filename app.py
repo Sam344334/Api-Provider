@@ -16,7 +16,11 @@ PUTER_BASE_URL = 'https://api.puter.com/chat'
 # Initialize OpenAI client for OpenRouter
 openrouter_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=OPENROUTER_API_KEY
+    api_key=OPENROUTER_API_KEY,
+    default_headers={
+        "HTTP-Referer": "https://api-provider-b5s7.onrender.com",  # Required for OpenRouter
+        "X-Title": "AI Models Demo"  # Optional
+    }
 )
 
 # Group models by their API provider
@@ -80,10 +84,6 @@ def call_openrouter(prompt, model):
     
     try:
         completion = openrouter_client.chat.completions.create(
-            extra_headers={
-                "HTTP-Referer": "https://api-provider-b5s7.onrender.com",
-                "X-Title": "AI Models Demo",
-            },
             model=model,
             messages=[
                 {
