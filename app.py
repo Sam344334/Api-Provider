@@ -1,119 +1,135 @@
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
-import requests
-import os
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Models Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .chat-container {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        select, textarea, button {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        select {
+            background-color: white;
+        }
+        select optgroup {
+            font-weight: bold;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #response {
+            white-space: pre-wrap;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .loading {
+            display: none;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Models Demo</h1>
+    <div class="chat-container">
+        <div class="input-group">
+            <label for="model">Select Model:</label>
+            <select id="model">
+                <optgroup label="Fast TypeGPT Models">
+                    <option value="deepseek-r1">DeepSeek-R1</option>
+                    <option value="gpt-4o">GPT-4O</option>
+                </optgroup>
+                <optgroup label="Puter AI Models">
+                    <option value="claude">Claude</option>
+                </optgroup>
+                <optgroup label="OpenRouter Models">
+                    <option value="deepseek/deepseek-r1-zero:free">DeepSeek R1 Zero</option>
+                    <option value="qwen/qwq-32b:free">Qwen 32B</option>
+                    <option value="qwen/qwen2.5-vl-72b-instruct:free">Qwen 2.5 VL 72B</option>
+                    <option value="deepseek/deepseek-r1-distill-qwen-32b:free">DeepSeek R1 Distill Qwen</option>
+                    <option value="deepseek/deepseek-r1:free">DeepSeek R1</option>
+                    <option value="deepseek/deepseek-chat:free">DeepSeek Chat</option>
+                    <option value="google/gemini-2.0-flash-thinking-exp-1219:free">Gemini 2.0 Flash</option>
+                    <option value="qwen/qwen-2.5-coder-32b-instruct:free">Qwen 2.5 Coder</option>
+                </optgroup>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="prompt">Enter your prompt:</label>
+            <textarea id="prompt" rows="4" placeholder="Type your message here..."></textarea>
+        </div>
+        <button onclick="sendMessage()">Send Message</button>
+        <div id="loading" class="loading">Processing request...</div>
+        <div id="response"></div>
+    </div>
 
-app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+    <script>
+        async function sendMessage() {
+            const prompt = document.getElementById('prompt').value;
+            const model = document.getElementById('model').value;
+            const responseDiv = document.getElementById('response');
+            const loadingDiv = document.getElementById('loading');
 
-FAST_API_KEY = os.environ.get('API_KEY', 'sk-J9vDDHyPZfXCCf9CLNNMpnDdayVDnEDQ7AQ44siKoIu3PsaS')
-OPENROUTER_API_KEY = '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'
-FAST_BASE_URL = 'https://fast.typegpt.net/v1/chat/completions'
-PUTER_BASE_URL = 'https://api.puter.com/chat'
-OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+            if (!prompt.trim()) {
+                alert('Please enter a prompt');
+                return;
+            }
 
-VALID_MODELS = [
-    'deepseek-r1', 
-    'gpt-4o', 
-    'claude',
-    'deepseek/deepseek-r1-zero:free',
-    'qwen/qwq-32b:free',
-    'qwen/qwen2.5-vl-72b-instruct:free',
-    'deepseek/deepseek-r1-distill-qwen-32b:free',
-    'deepseek/deepseek-r1:free',
-    'deepseek/deepseek-chat:free',
-    'google/gemini-2.0-flash-thinking-exp-1219:free',
-    'qwen/qwen-2.5-coder-32b-instruct:free'
-]
+            loadingDiv.style.display = 'block';
+            responseDiv.textContent = '';
 
-def call_fast_typegpt(prompt, model):
-    headers = {
-        'Authorization': f'Bearer {FAST_API_KEY}',
-        'Content-Type': 'application/json'
-    }
-    data = {
-        'model': model,
-        'messages': [{'role': 'user', 'content': prompt}],
-        'max_tokens': 50
-    }
-    try:
-        response = requests.post(FAST_BASE_URL, json=data, headers=headers)
-        response.raise_for_status()
-        return {'answer': response.json()['choices'][0]['message']['content']}
-    except requests.RequestException as e:
-        return {'error': f'Fast API Failed: {str(e)}'}
+            try {
+                const response = await fetch('https://api-provider-b5s7.onrender.com/api/answer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        model: model
+                    })
+                });
 
-def call_puter_ai(prompt, model):
-    headers = {
-        'Content-Type': 'application/json'
-    }
-    data = {
-        'model': model,
-        'prompt': prompt,
-        'stream': False
-    }
-    try:
-        response = requests.post(PUTER_BASE_URL, json=data, headers=headers)
-        response.raise_for_status()
-        return {'answer': response.json().get('text', 'No response')}
-    except requests.RequestException as e:
-        return {'error': f'Puter API Failed: {str(e)}'}
-
-def call_openrouter(prompt, model):
-    headers = {
-        'Authorization': f'Bearer {OPENROUTER_API_KEY}',
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://your-site.com',  # Replace with your actual site
-        'X-Title': 'AI Models Demo'  # Replace with your actual app name
-    }
-    
-    data = {
-        'model': model,
-        'messages': [{'role': 'user', 'content': prompt}],
-        'max_tokens': 1000
-    }
-    
-    try:
-        response = requests.post(OPENROUTER_URL, json=data, headers=headers)
-        response.raise_for_status()
-        return {'answer': response.json()['choices'][0]['message']['content']}
-    except requests.RequestException as e:
-        return {'error': f'OpenRouter API Failed: {str(e)}'}
-
-@app.route('/')
-def home():
-    return render_template('home.html', models=VALID_MODELS)
-
-@app.route('/api/answer', methods=['POST', 'GET'])
-def answer():
-    if request.method == 'GET':
-        return jsonify({'message': 'Please use POST method with prompt and model in JSON body'})
-    
-    data = request.get_json()
-    prompt = data.get('prompt', '')
-    model = data.get('model', 'deepseek-r1')
-    
-    if not prompt:
-        return jsonify({'error': 'Prompt required'}), 400
-    if model not in VALID_MODELS:
-        return jsonify({'error': f'Model {model} not supported. Use: {VALID_MODELS}'}), 400
-    
-    try:
-        if model == 'claude':
-            response = call_puter_ai(prompt, model)
-        elif model in ['deepseek-r1', 'gpt-4o']:
-            response = call_fast_typegpt(prompt, model)
-        else:
-            # All other models are handled by OpenRouter
-            response = call_openrouter(prompt, model)
-            
-        if 'error' in response:
-            # Fallback to deepseek-r1 if the chosen model fails
-            return call_fast_typegpt(prompt, 'deepseek-r1')
-            
-        return jsonify(response)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+                const data = await response.json();
+                
+                if (data.error) {
+                    responseDiv.textContent = `Error: ${data.error}`;
+                } else {
+                    responseDiv.textContent = data.answer;
+                }
+            } catch (error) {
+                responseDiv.textContent = `Error: ${error.message}`;
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
