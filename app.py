@@ -48,8 +48,11 @@ def call_puter_ai(prompt, model):
 def home():
     return render_template('home.html', models=VALID_MODELS)
 
-@app.route('/api/answer', methods=['POST'])
+@app.route('/api/answer', methods=['POST', 'GET'])
 def answer():
+    if request.method == 'GET':
+        return jsonify({'message': 'Please use POST method with prompt and model in JSON body'})
+    
     data = request.get_json()
     prompt = data.get('prompt', '')
     model = data.get('model', 'deepseek-r1')
