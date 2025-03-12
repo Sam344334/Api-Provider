@@ -8,7 +8,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 # API Keys and Base URLs
 FAST_API_KEY = os.environ.get('API_KEY', 'sk-J9vDDHyPZfXCCf9CLNNMpnDdayVDnEDQ7AQ44siKoIu3PsaS')
-OPENROUTER_API_KEY = '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'
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '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')
 FAST_BASE_URL = 'https://fast.typegpt.net/v1/chat/completions'
 PUTER_BASE_URL = 'https://api.puter.com/chat'
 OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
@@ -75,26 +75,35 @@ def call_openrouter(prompt, model):
     headers = {
         'Authorization': f'Bearer {OPENROUTER_API_KEY}',
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://api-provider-b5s7.onrender.com/',  # Updated with trailing slash
-        'X-Title': 'AI Models Demo',
-        'OpenAI-Organization': 'augment-code'  # Added organization header
+        'HTTP-Referer': 'https://api-provider-b5s7.onrender.com',
+        'X-Title': 'AI Models Demo'
     }
     
     data = {
         'model': model,
         'messages': [{'role': 'user', 'content': prompt}],
         'max_tokens': 1000,
-        'temperature': 0.7
+        'temperature': 0.7,
+        'headers': {
+            'HTTP-Referer': 'https://api-provider-b5s7.onrender.com'
+        }
     }
     
     try:
         response = requests.post(OPENROUTER_URL, json=data, headers=headers)
+        if response.status_code == 401:
+            return {'error': 'OpenRouter API authentication failed. Please check your API key.'}
         response.raise_for_status()
         return {'answer': response.json()['choices'][0]['message']['content']}
     except requests.RequestException as e:
-        if response.status_code == 401:
-            return {'error': 'OpenRouter API authentication failed. Please check your API key.'}
-        return {'error': f'OpenRouter API Failed: {str(e)}'}
+        error_message = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_data = e.response.json()
+                error_message = error_data.get('error', {}).get('message', str(e))
+            except:
+                pass
+        return {'error': f'OpenRouter API Failed: {error_message}'}
 
 @app.route('/')
 def home():
