@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import requests
 import os
+from openai import OpenAI
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -11,7 +12,12 @@ FAST_API_KEY = os.environ.get('API_KEY', 'sk-J9vDDHyPZfXCCf9CLNNMpnDdayVDnEDQ7AQ
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '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')
 FAST_BASE_URL = 'https://fast.typegpt.net/v1/chat/completions'
 PUTER_BASE_URL = 'https://api.puter.com/chat'
-OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+
+# Initialize OpenAI client for OpenRouter
+openrouter_client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=OPENROUTER_API_KEY
+)
 
 # Group models by their API provider
 FAST_MODELS = ['deepseek-r1', 'gpt-4o']
@@ -71,39 +77,26 @@ def call_puter_ai(prompt, model):
 def call_openrouter(prompt, model):
     if model not in OPENROUTER_MODELS:
         return {'error': 'Invalid model for OpenRouter API'}
-        
-    headers = {
-        'Authorization': f'Bearer {OPENROUTER_API_KEY}',
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://api-provider-b5s7.onrender.com',
-        'X-Title': 'AI Models Demo'
-    }
-    
-    data = {
-        'model': model,
-        'messages': [{'role': 'user', 'content': prompt}],
-        'max_tokens': 1000,
-        'temperature': 0.7,
-        'headers': {
-            'HTTP-Referer': 'https://api-provider-b5s7.onrender.com'
-        }
-    }
     
     try:
-        response = requests.post(OPENROUTER_URL, json=data, headers=headers)
-        if response.status_code == 401:
-            return {'error': 'OpenRouter API authentication failed. Please check your API key.'}
-        response.raise_for_status()
-        return {'answer': response.json()['choices'][0]['message']['content']}
-    except requests.RequestException as e:
-        error_message = str(e)
-        if hasattr(e, 'response') and e.response is not None:
-            try:
-                error_data = e.response.json()
-                error_message = error_data.get('error', {}).get('message', str(e))
-            except:
-                pass
-        return {'error': f'OpenRouter API Failed: {error_message}'}
+        completion = openrouter_client.chat.completions.create(
+            extra_headers={
+                "HTTP-Referer": "https://api-provider-b5s7.onrender.com",
+                "X-Title": "AI Models Demo",
+            },
+            model=model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            max_tokens=1000,
+            temperature=0.7
+        )
+        return {'answer': completion.choices[0].message.content}
+    except Exception as e:
+        return {'error': f'OpenRouter API Failed: {str(e)}'}
 
 @app.route('/')
 def home():
