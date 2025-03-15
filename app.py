@@ -2,29 +2,20 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import requests
 import os
-from openai import OpenAI
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # API Keys and Base URLs
 FAST_API_KEY = os.environ.get('API_KEY', 'sk-J9vDDHyPZfXCCf9CLNNMpnDdayVDnEDQ7AQ44siKoIu3PsaS')
-HF_API_KEY = os.environ.get('HF_API_KEY', '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')
 FAST_BASE_URL = 'https://fast.typegpt.net/v1/chat/completions'
 PUTER_BASE_URL = 'https://api.puter.com/chat'
-
-# Initialize Hugging Face client
-hf_client = OpenAI(
-    base_url="https://router.huggingface.co/fireworks-ai",
-    api_key=HF_API_KEY
-)
 
 # Group models by their API provider
 FAST_MODELS = ['deepseek-r1', 'gpt-4o']
 PUTER_MODELS = ['claude']
-HF_MODELS = ['accounts/perplexity/models/r1-1776']  # Correct model identifier
 
-VALID_MODELS = FAST_MODELS + PUTER_MODELS + HF_MODELS
+VALID_MODELS = FAST_MODELS + PUTER_MODELS
 
 def call_fast_typegpt(prompt, model):
     if model not in FAST_MODELS:
@@ -65,22 +56,6 @@ def call_puter_ai(prompt, model):
     except requests.RequestException as e:
         return {'error': f'Puter API Failed: {str(e)}'}
 
-def call_huggingface(prompt, model):
-    if model not in HF_MODELS:
-        return {'error': 'Invalid model for Hugging Face'}
-    
-    try:
-        messages = [{"role": "user", "content": prompt}]
-        completion = hf_client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=500,
-            temperature=0.7  # Added temperature parameter for better control
-        )
-        return {'answer': completion.choices[0].message.content}
-    except Exception as e:
-        return {'error': f'Hugging Face API Failed: {str(e)}'}
-
 @app.route('/')
 def home():
     return render_template('home.html', models=VALID_MODELS)
@@ -105,8 +80,6 @@ def answer():
             return jsonify(call_puter_ai(prompt, model))
         elif model in FAST_MODELS:
             return jsonify(call_fast_typegpt(prompt, model))
-        elif model in HF_MODELS:
-            return jsonify(call_huggingface(prompt, model))
         else:
             return jsonify({'error': 'Invalid model selection'}), 400
             
