@@ -9,35 +9,22 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 # API Keys and Base URLs
 FAST_API_KEY = os.environ.get('API_KEY', 'sk-J9vDDHyPZfXCCf9CLNNMpnDdayVDnEDQ7AQ44siKoIu3PsaS')
-OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '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')
+HF_API_KEY = os.environ.get('HF_API_KEY', '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')
 FAST_BASE_URL = 'https://fast.typegpt.net/v1/chat/completions'
 PUTER_BASE_URL = 'https://api.puter.com/chat'
 
-# Initialize OpenAI client for OpenRouter
-openrouter_client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=OPENROUTER_API_KEY,
-    default_headers={
-        "HTTP-Referer": "https://api-provider-b5s7.onrender.com",  # Required for OpenRouter
-        "X-Title": "AI Models Demo"  # Optional
-    }
+# Initialize Hugging Face client
+hf_client = OpenAI(
+    base_url="https://router.huggingface.co/fireworks-ai",
+    api_key=HF_API_KEY
 )
 
 # Group models by their API provider
 FAST_MODELS = ['deepseek-r1', 'gpt-4o']
 PUTER_MODELS = ['claude']
-OPENROUTER_MODELS = [
-    'deepseek/deepseek-r1-zero:free',
-    'qwen/qwq-32b:free',
-    'qwen/qwen2.5-vl-72b-instruct:free',
-    'deepseek/deepseek-r1-distill-qwen-32b:free',
-    'deepseek/deepseek-r1:free',
-    'deepseek/deepseek-chat:free',
-    'google/gemini-2.0-flash-thinking-exp-1219:free',
-    'qwen/qwen-2.5-coder-32b-instruct:free'
-]
+HF_MODELS = ['accounts/perplexity/models/r1-1776']  # Correct model identifier
 
-VALID_MODELS = FAST_MODELS + PUTER_MODELS + OPENROUTER_MODELS
+VALID_MODELS = FAST_MODELS + PUTER_MODELS + HF_MODELS
 
 def call_fast_typegpt(prompt, model):
     if model not in FAST_MODELS:
@@ -78,25 +65,21 @@ def call_puter_ai(prompt, model):
     except requests.RequestException as e:
         return {'error': f'Puter API Failed: {str(e)}'}
 
-def call_openrouter(prompt, model):
-    if model not in OPENROUTER_MODELS:
-        return {'error': 'Invalid model for OpenRouter API'}
+def call_huggingface(prompt, model):
+    if model not in HF_MODELS:
+        return {'error': 'Invalid model for Hugging Face'}
     
     try:
-        completion = openrouter_client.chat.completions.create(
+        messages = [{"role": "user", "content": prompt}]
+        completion = hf_client.chat.completions.create(
             model=model,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            max_tokens=1000,
-            temperature=0.7
+            messages=messages,
+            max_tokens=500,
+            temperature=0.7  # Added temperature parameter for better control
         )
         return {'answer': completion.choices[0].message.content}
     except Exception as e:
-        return {'error': f'OpenRouter API Failed: {str(e)}'}
+        return {'error': f'Hugging Face API Failed: {str(e)}'}
 
 @app.route('/')
 def home():
@@ -118,12 +101,12 @@ def answer():
     
     try:
         # Route to correct API based on model
-        if model in OPENROUTER_MODELS:
-            return jsonify(call_openrouter(prompt, model))
-        elif model in PUTER_MODELS:
+        if model in PUTER_MODELS:
             return jsonify(call_puter_ai(prompt, model))
         elif model in FAST_MODELS:
             return jsonify(call_fast_typegpt(prompt, model))
+        elif model in HF_MODELS:
+            return jsonify(call_huggingface(prompt, model))
         else:
             return jsonify({'error': 'Invalid model selection'}), 400
             
